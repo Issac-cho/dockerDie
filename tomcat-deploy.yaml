@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    role: send-content
+    app: tomcat-backend
+  name: tomcat-deploy
+  namespace: back
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      role: send-content
+      app: tomcat-backend
+  template:
+    metadata:
+      labels:
+        role: send-content
+        app: tomcat-backend
+    spec:
+      imagePullSecrets:
+      - name: ecr-secret
+      containers:
+      - image: 007027391364.dkr.ecr.ap-northeast-2.amazonaws.com/guestbook-tomcat:v2.0
+        name: guestbook-was
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        livenessProbe:
+          httpGet:
+            path: /guestbook
+            port: 8080
+          initialDelaySeconds: 300
+          failureThreshold: 3
+          successThreshold: 1
+          periodSeconds: 10
+          timeoutSeconds: 3
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: role
+                  operator: In
+                  values:
+                  - send-content
+              topologyKey: "kubernetes.io/hostname"
+      topologySpreadConstraints:
+      - maxSkew: 2
+        topologyKey: "kubernetes.io/hostname"
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            role: send-content
