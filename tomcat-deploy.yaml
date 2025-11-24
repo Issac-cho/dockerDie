@@ -21,7 +21,7 @@ spec:
       imagePullSecrets:
       - name: ecr-secret
       containers:
-      - image: 007027391364.dkr.ecr.ap-northeast-2.amazonaws.com/guestbook-tomcat:v2.0
+      - image: 007027391364.dkr.ecr.ap-northeast-2.amazonaws.com/guestbook-tomcat:v3.0
         name: guestbook-was
         resources:
           limits:
