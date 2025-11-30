@@ -27,7 +27,8 @@ spec:
       initContainers:
         - name: whatap-agent-install
           image: busybox
-          command: ["sh", "-c", "mkdir -p /whatap && wget -qO /whatap/whatap.agent.jar https://api.whatap.io/agent/whatap.agent.java.tar.gz/jar"]
+          # ▼▼▼ 기존 명령어에서 '--no-check-certificate' 옵션 추가 ▼▼▼
+          command: ["sh", "-c", "mkdir -p /whatap && wget --no-check-certificate -qO /whatap/whatap.agent.jar https://api.whatap.io/agent/whatap.agent.java.tar.gz/jar"]
           volumeMounts:
             - name: whatap-agent-volume
               mountPath: /whatap
