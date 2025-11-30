@@ -18,20 +18,30 @@ spec:
         role: send-content
         app: tomcat-backend
     spec:
-      # [1] 공유 볼륨 (에이전트 파일 저장소)
+      # [1] 공유 볼륨 (에이전트 파일 및 설정 저장소)
       volumes:
         - name: whatap-agent-volume
           emptyDir: {}
 
-      # [2] 에이전트 설치 (InitContainer)
-      # 수정사항: 다운로드 -> 압축해제 -> 이동 -> [중요] 권한 777 부여 (Access Denied 해결)
+      # [2] 에이전트 설치 및 설정 파일 생성 (InitContainer)
+      # 수정사항:
+      # 1. alpine 이미지 사용 (다운로드 안정성)
+      # 2. echo 명령어로 whatap.conf 파일을 직접 생성 (PCODE 0 해결)
+      # 3. chmod 777로 모든 권한 부여
       initContainers:
         - name: whatap-agent-install
           image: alpine:latest
           command: 
             - "/bin/sh"
             - "-c"
-            - "wget --no-check-certificate -qO /tmp/whatap.tar.gz https://api.whatap.io/agent/whatap.agent.java.tar.gz && tar -xzf /tmp/whatap.tar.gz -C /tmp && mv /tmp/whatap/whatap.agent-*.jar /whatap/whatap.agent.jar && chmod -R 777 /whatap"
+            - |
+              wget --no-check-certificate -qO /tmp/whatap.tar.gz https://api.whatap.io/agent/whatap.agent.java.tar.gz && \
+              tar -xzf /tmp/whatap.tar.gz -C /tmp && \
+              mv /tmp/whatap/whatap.agent-*.jar /whatap/whatap.agent.jar && \
+              echo "license=x605rc08ea43r-z6etdmfjalcije-z4q5n4i7fui092" > /whatap/whatap.conf && \
+              echo "whatap.server.host=13.124.11.223" >> /whatap/whatap.conf && \
+              echo "whatap.micro.enabled=true" >> /whatap/whatap.conf && \
+              chmod -R 777 /whatap
           volumeMounts:
             - name: whatap-agent-volume
               mountPath: /whatap
@@ -44,29 +54,25 @@ spec:
       - image: jybill01/gbt:v2.0
         name: guestbook-was
         
-        # [3-1] 공유 볼륨 연결
+        # [3-1] 공유 볼륨 연결 (설정 파일과 jar 파일 읽기)
         volumeMounts:
           - name: whatap-agent-volume
             mountPath: /whatap
 
-        # [3-2] 환경변수 설정
+        # [3-2] 톰캣 실행 옵션 (Java 17 필수 옵션 + 메모리 설정)
+        # PCODE(0) 해결을 위해 라이선스 키 env는 제거하고 파일(whatap.conf)에 의존합니다.
         env:
-          - name: WHATAP_LICENSE
-            value: "x605rc08ea43r-z6etdmfjalcije-z4q5n4i7fui092"
-          - name: WHATAP_SERVER_HOST
-            value: "13.124.11.223"
           - name: WHATAP_APP_NAME
             value: "Tomcat-Guestbook"
           
-          # [핵심 수정] 500 에러 및 NoClassDefFoundError 해결 옵션 집합
-          # 1. -javaagent: 에이전트 실행
-          # 2. -Xbootclasspath/a: 부트스트랩 클래스패스에 추가 (클래스 로딩 에러 해결)
-          # 3. --add-opens: Java 17 호환성
-          # 4. -Xms/-Xmx: 힙 메모리 할당
+          # -javaagent: 에이전트 실행
+          # -Xbootclasspath: 클래스 로딩 에러 방지
+          # --add-opens: Java 17 권한 우회
+          # -Xms/-Xmx: 힙 메모리 할당
           - name: JAVA_TOOL_OPTIONS
             value: "-javaagent:/whatap/whatap.agent.jar -Xbootclasspath/a:/whatap/whatap.agent.jar -Dwhatap.micro.enabled=true --add-opens=java.base/java.lang=ALL-UNNAMED -Xms512m -Xmx512m"
 
-        # [3-3] 리소스 상향 (안정적인 부팅을 위해)
+        # [3-3] 리소스 상향 (부팅 중 사망 방지)
         resources:
           limits:
             cpu: "1000m"
@@ -75,12 +81,12 @@ spec:
             cpu: "500m"
             memory: "512Mi"
 
-        # [3-4] 헬스 체크 시간 연장
+        # [3-4] 헬스 체크
         livenessProbe:
           httpGet:
             path: /guestbook
             port: 8080
-          initialDelaySeconds: 60  # 부팅 대기 시간 늘림
+          initialDelaySeconds: 60
           failureThreshold: 5
           successThreshold: 1
           periodSeconds: 10
