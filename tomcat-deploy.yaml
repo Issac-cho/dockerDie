@@ -62,8 +62,8 @@ spec:
 
         resources:
           limits:
-            cpu: "500m"
-            memory: "512Mi"
+            cpu: "1000m"
+            memory: "1Gi"
         livenessProbe:
           httpGet:
             path: /guestbook
