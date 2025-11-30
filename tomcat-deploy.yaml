@@ -23,14 +23,15 @@ spec:
         - name: whatap-agent-volume
           emptyDir: {}
 
-      # [2] 에이전트 설치 (수정됨: alpine 이미지 사용으로 다운로드 오류 해결)
+      # [2] 에이전트 설치 (InitContainer)
+      # 수정사항: 다운로드 -> 압축해제 -> 이동 -> [중요] 권한 777 부여 (Access Denied 해결)
       initContainers:
         - name: whatap-agent-install
           image: alpine:latest
           command: 
             - "/bin/sh"
             - "-c"
-            - "wget --no-check-certificate -qO /tmp/whatap.tar.gz https://api.whatap.io/agent/whatap.agent.java.tar.gz && tar -xzf /tmp/whatap.tar.gz -C /tmp && mv /tmp/whatap/whatap.agent-*.jar /whatap/whatap.agent.jar"
+            - "wget --no-check-certificate -qO /tmp/whatap.tar.gz https://api.whatap.io/agent/whatap.agent.java.tar.gz && tar -xzf /tmp/whatap.tar.gz -C /tmp && mv /tmp/whatap/whatap.agent-*.jar /whatap/whatap.agent.jar && chmod -R 777 /whatap"
           volumeMounts:
             - name: whatap-agent-volume
               mountPath: /whatap
@@ -43,12 +44,12 @@ spec:
       - image: jybill01/gbt:v2.0
         name: guestbook-was
         
-        # [3-1] 공유 볼륨 마운트
+        # [3-1] 공유 볼륨 연결
         volumeMounts:
           - name: whatap-agent-volume
             mountPath: /whatap
 
-        # [3-2] 와탭 필수 환경변수 (Java 17 옵션 포함)
+        # [3-2] 환경변수 설정
         env:
           - name: WHATAP_LICENSE
             value: "x605rc08ea43r-z6etdmfjalcije-z4q5n4i7fui092"
@@ -56,20 +57,31 @@ spec:
             value: "13.124.11.223"
           - name: WHATAP_APP_NAME
             value: "Tomcat-Guestbook"
-          # Java 17 필수 옵션(--add-opens) 추가됨
+          
+          # [핵심 수정] 500 에러 및 NoClassDefFoundError 해결 옵션 집합
+          # 1. -javaagent: 에이전트 실행
+          # 2. -Xbootclasspath/a: 부트스트랩 클래스패스에 추가 (클래스 로딩 에러 해결)
+          # 3. --add-opens: Java 17 호환성
+          # 4. -Xms/-Xmx: 힙 메모리 할당
           - name: JAVA_TOOL_OPTIONS
-            value: "-javaagent:/whatap/whatap.agent.jar -Dwhatap.micro.enabled=true --add-opens=java.base/java.lang=ALL-UNNAMED"
+            value: "-javaagent:/whatap/whatap.agent.jar -Xbootclasspath/a:/whatap/whatap.agent.jar -Dwhatap.micro.enabled=true --add-opens=java.base/java.lang=ALL-UNNAMED -Xms512m -Xmx512m"
 
+        # [3-3] 리소스 상향 (안정적인 부팅을 위해)
         resources:
           limits:
             cpu: "1000m"
             memory: "1Gi"
+          requests:
+            cpu: "500m"
+            memory: "512Mi"
+
+        # [3-4] 헬스 체크 시간 연장
         livenessProbe:
           httpGet:
             path: /guestbook
             port: 8080
-          initialDelaySeconds: 300
-          failureThreshold: 3
+          initialDelaySeconds: 60  # 부팅 대기 시간 늘림
+          failureThreshold: 5
           successThreshold: 1
           periodSeconds: 10
           timeoutSeconds: 3
