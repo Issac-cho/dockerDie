@@ -18,11 +18,44 @@ spec:
         role: send-content
         app: tomcat-backend
     spec:
+      # [1] 공유 볼륨 추가 (위치: containers와 같은 레벨)
+      volumes:
+        - name: whatap-agent-volume
+          emptyDir: {}
+
+      # [2] 에이전트 다운로드 배달부 추가 (위치: containers 바로 위)
+      initContainers:
+        - name: whatap-agent-install
+          image: busybox
+          command: ["sh", "-c", "mkdir -p /whatap && wget -qO /whatap/whatap.agent.jar https://api.whatap.io/agent/whatap.agent.java.tar.gz/jar"]
+          volumeMounts:
+            - name: whatap-agent-volume
+              mountPath: /whatap
+
       imagePullSecrets:
       - name: ecr-secret
+
+      # [3] 메인 컨테이너 수정
       containers:
       - image: jybill01/gbt:v2.0
         name: guestbook-was
+        
+        # [3-1] 공유 볼륨 연결
+        volumeMounts:
+          - name: whatap-agent-volume
+            mountPath: /whatap
+
+        # [3-2] 와탭 설정 환경변수 추가
+        env:
+          - name: WHATAP_LICENSE
+            value: "x605rc08ea43r-z6etdmfjalcije-z4q5n4i7fui092"
+          - name: WHATAP_SERVER_HOST
+            value: "13.124.11.223"  # (화면에서 제공한 ip입력)
+          - name: WHATAP_APP_NAME
+            value: "Tomcat-Guestbook" # (원하는 프로젝트 이름)
+          - name: JAVA_TOOL_OPTIONS
+            value: "-javaagent:/whatap/whatap.agent.jar -Dwhatap.micro.enabled=true"
+
         resources:
           limits:
             cpu: "500m"
@@ -36,6 +69,7 @@ spec:
           successThreshold: 1
           periodSeconds: 10
           timeoutSeconds: 3
+      
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
