@@ -18,19 +18,19 @@ spec:
         role: send-content
         app: tomcat-backend
     spec:
-      # [1] 공유 볼륨
+      # [1] 공유 볼륨 (에이전트 파일 저장소)
       volumes:
         - name: whatap-agent-volume
           emptyDir: {}
 
-      # [2] 에이전트 다운로드 배달부 (수정됨: 404 해결 버전)
+      # [2] 에이전트 설치 (수정됨: alpine 이미지 사용으로 다운로드 오류 해결)
       initContainers:
         - name: whatap-agent-install
-          image: busybox
+          image: alpine:latest
           command: 
             - "/bin/sh"
             - "-c"
-            - "wget -qO /tmp/whatap.tar.gz http://repo.whatap.io/agent/whatap.agent.java.tar.gz && tar -xzf /tmp/whatap.tar.gz -C /tmp && mv /tmp/whatap/whatap.agent-*.jar /whatap/whatap.agent.jar"
+            - "wget --no-check-certificate -qO /tmp/whatap.tar.gz https://api.whatap.io/agent/whatap.agent.java.tar.gz && tar -xzf /tmp/whatap.tar.gz -C /tmp && mv /tmp/whatap/whatap.agent-*.jar /whatap/whatap.agent.jar"
           volumeMounts:
             - name: whatap-agent-volume
               mountPath: /whatap
@@ -38,17 +38,17 @@ spec:
       imagePullSecrets:
       - name: ecr-secret
 
-      # [3] 메인 컨테이너
+      # [3] 메인 컨테이너 (Tomcat)
       containers:
       - image: jybill01/gbt:v2.0
         name: guestbook-was
         
-        # [3-1] 공유 볼륨 연결
+        # [3-1] 공유 볼륨 마운트
         volumeMounts:
           - name: whatap-agent-volume
             mountPath: /whatap
 
-        # [3-2] 와탭 설정 환경변수 (수정됨: Java 17 옵션 추가)
+        # [3-2] 와탭 필수 환경변수 (Java 17 옵션 포함)
         env:
           - name: WHATAP_LICENSE
             value: "x605rc08ea43r-z6etdmfjalcije-z4q5n4i7fui092"
@@ -56,8 +56,7 @@ spec:
             value: "13.124.11.223"
           - name: WHATAP_APP_NAME
             value: "Tomcat-Guestbook"
-          
-          # ▼▼▼ 여기가 Java 17 필수 수정 포인트입니다! ▼▼▼
+          # Java 17 필수 옵션(--add-opens) 추가됨
           - name: JAVA_TOOL_OPTIONS
             value: "-javaagent:/whatap/whatap.agent.jar -Dwhatap.micro.enabled=true --add-opens=java.base/java.lang=ALL-UNNAMED"
 
