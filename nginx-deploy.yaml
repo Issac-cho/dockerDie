@@ -29,7 +29,7 @@ spec:
             memory: "128Mi"
         livenessProbe:
           httpGet:
-            path: /guestbook
+            path: /
             port: 80
           initialDelaySeconds: 10
           failureThreshold: 3
