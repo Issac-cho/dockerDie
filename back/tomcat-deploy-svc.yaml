@@ -15,4 +15,3 @@ spec:
     role: send-content
     app: tomcat-backend
   type: ClusterIP
-  clusterIP: 10.100.100.200

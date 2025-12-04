@@ -8,6 +8,12 @@ metadata:
   namespace: front
 spec:
   replicas: 3
+  revisionHistoryLimit: 10
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
   selector:
     matchLabels:
       role: show-guestbook
@@ -21,13 +27,22 @@ spec:
       imagePullSecrets:
       - name: ecr-secret
       containers:
-      - image: 007027391364.dkr.ecr.ap-northeast-2.amazonaws.com/guestbook-nginx:v1.0
+      - image: jybill01/geustbook-nginx:v1.0
         name: guestbook-web
         resources:
           limits:
             cpu: "250m"
             memory: "128Mi"
         livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 10
+          failureThreshold: 3
+          successThreshold: 1
+          periodSeconds: 10
+          timeoutSeconds: 3
+        readinessProbe:
           httpGet:
             path: /
             port: 80
@@ -46,7 +61,7 @@ spec:
                 - key: role
                   operator: In
                   values:
-                  - send-content
+                  - show-guestbook
               topologyKey: "kubernetes.io/hostname"
       topologySpreadConstraints:
       - maxSkew: 2
