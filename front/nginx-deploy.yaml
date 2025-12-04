@@ -8,12 +8,6 @@ metadata:
   namespace: front
 spec:
   replicas: 3
-  revisionHistoryLimit: 10
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: 25%
-      maxUnavailable: 25%
   selector:
     matchLabels:
       role: show-guestbook
@@ -42,15 +36,6 @@ spec:
           successThreshold: 1
           periodSeconds: 10
           timeoutSeconds: 3
-        readinessProbe:
-          httpGet:
-            path: /
-            port: 80
-          initialDelaySeconds: 10
-          failureThreshold: 3
-          successThreshold: 1
-          periodSeconds: 10
-          timeoutSeconds: 3
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -61,7 +46,7 @@ spec:
                 - key: role
                   operator: In
                   values:
-                  - show-guestbook
+                  - send-content
               topologyKey: "kubernetes.io/hostname"
       topologySpreadConstraints:
       - maxSkew: 2
