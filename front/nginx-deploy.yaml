@@ -27,15 +27,15 @@ spec:
       imagePullSecrets:
       - name: ecr-secret
       containers:
-      - image: jybill01/guestbook-nginx:v1.0
+      - image: jybill01/guestbook-nginx:v2.0
         name: guestbook-web
         resources:
           limits:
-            cpu: "250m"
-            memory: "128Mi"
+            cpu: "125m"
+            memory: "32Mi"
         livenessProbe:
           httpGet:
-            path: /
+            path: /healthcheck
             port: 80
           initialDelaySeconds: 10
           failureThreshold: 3
@@ -44,7 +44,7 @@ spec:
           timeoutSeconds: 3
         readinessProbe:
           httpGet:
-            path: /
+            path: /healthcheck
             port: 80
           initialDelaySeconds: 10
           failureThreshold: 3
