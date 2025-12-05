@@ -27,7 +27,7 @@ spec:
       imagePullSecrets:
       - name: ecr-secret
       containers:
-      - image: jybill01/guestbook-tomcat:v1.0
+      - image: jybill01/guestbook-tomcat:v3.0
         name: guestbook-was
         #env:
         #- name: JAVA_OPTS
@@ -38,13 +38,13 @@ spec:
             memory: "512Mi"
         startupProbe:
           httpGet:
-            path: /guestbook
+            path: /guestbook/health.html
             port: 8080
           failureThreshold: 30
           periodSeconds: 10
         livenessProbe:
           httpGet:
-            path: /guestbook
+            path: /guestbook/health.html
             port: 8080
           initialDelaySeconds: 0
           failureThreshold: 3
