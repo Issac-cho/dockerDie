@@ -31,7 +31,7 @@ spec:
         name: guestbook-web
         resources:
           limits:
-            cpu: "125m"
+            cpu: "100m"
             memory: "32Mi"
         livenessProbe:
           httpGet:
