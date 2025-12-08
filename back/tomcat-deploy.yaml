@@ -34,7 +34,7 @@ spec:
         #  value: "-Xms256m -Xmx350m"
         resources:
           limits:
-            cpu: "500m"
+            cpu: "450m"
             memory: "512Mi"
         startupProbe:
           httpGet:
@@ -60,18 +60,18 @@ spec:
           successThreshold: 1
           periodSeconds: 10
           timeoutSeconds: 10
-      affinity:
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 100
-            podAffinityTerm:
-              labelSelector:
-                matchExpressions:
-                - key: role
-                  operator: In
-                  values:
-                  - send-content
-              topologyKey: "kubernetes.io/hostname"
+#      affinity:
+#        podAntiAffinity:
+#          preferredDuringSchedulingIgnoredDuringExecution:
+#          - weight: 100
+#            podAffinityTerm:
+#              labelSelector:
+#                matchExpressions:
+#                - key: role
+#                  operator: In
+#                  values:
+#                  - send-content
+#              topologyKey: "kubernetes.io/hostname"
       topologySpreadConstraints:
       - maxSkew: 1
         topologyKey: "kubernetes.io/hostname"

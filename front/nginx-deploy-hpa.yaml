@@ -1,4 +1,4 @@
-apiVersion: autoscaling/v1
+apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: nginx-deploy-hpa
@@ -10,4 +10,17 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: nginx-deploy
-  targetCPUUtilizationPercentage: 70
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 30
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 30
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
